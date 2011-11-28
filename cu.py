@@ -89,14 +89,37 @@ class InputStreamToQueue(threading.Thread):
 				self.__queue.put( (self.__name, line) )
 		self.__queue.put(None)
 
-def popen3compatability(command):
+class PopenCompatability:
+	def __init__(self, command):
+		(self.stdin, self.stdout, self.stderr)= os.popen3(command)
+		self.returncode= 0
+	def kill(self):
+		sys.stderr.write("ERROR: Unable to kill process after timeout\r\n") # Figure out how to kill the process
+
+def popen(command):
+	""" bridges the gap between subprocess and popen3
+		popen3 is deprecated but subprocess is not in some earlier versions of Python
+		returns Popen like type
+	"""
+	if kUseSubProcess:
+		#print "command",command
+		return subprocess.Popen(	command,
+								shell=False, # needs to be True for Windows? needs to be False on UNIX
+								stdin=subprocess.PIPE,
+								stdout=subprocess.PIPE,
+								stderr=subprocess.PIPE,
+								close_fds=True
+		)
+	return PopenCompatability(command)
+
+def popen3compatability(command, shell= True):
 	""" bridges the gap between subprocess and popen3
 		popen3 is deprecated but subprocess is not in some earlier versions of Python
 		drop in replacement for popen3(command)
 	"""
 	if kUseSubProcess:
 		p= subprocess.Popen(	command,
-								shell=True,
+								shell= shell,
 								stdin=subprocess.PIPE,
 								stdout=subprocess.PIPE,
 								stderr=subprocess.PIPE,
@@ -106,7 +129,7 @@ def popen3compatability(command):
 	else:
 		return os.popen3(command)
 
-def startProcess(command, stdin= None):
+def startProcess(command, stdin= None, shell= True):
 	""" starts a command runnings and returns a queue the receives the output
 		if stdin is a string, it will be written to the stdin
 		the queue returned will receive a queue of tuples, or None
@@ -114,7 +137,7 @@ def startProcess(command, stdin= None):
 			When two None's are returned (one for stderr one for stdout)
 				all process output has been received
 	"""
-	(makeStdIn, makeStdOut, makeStdErr)= popen3compatability(command)
+	(makeStdIn, makeStdOut, makeStdErr)= popen3compatability(command, shell= shell)
 	lines= Queue.Queue(0)
 	if stdin:
 		makeStdIn.write(stdin)
@@ -123,7 +146,7 @@ def startProcess(command, stdin= None):
 	stderr= InputStreamToQueue(makeStdErr, lines, "err")
 	return lines
 
-def execute(command, interleave= False, stdin= None, debugLevel= 0):
+def execute(command, interleave= False, stdin= None, debugLevel= 0, shell= True):
 	""" executes a command in the shell
 		command is the command to execute
 		if interleave is true, then stderr will be interleaved with stdout
@@ -136,7 +159,7 @@ def execute(command, interleave= False, stdin= None, debugLevel= 0):
 	"""
 	if debugLevel >= 2:
 		print command
-	lines= startProcess(command, stdin)
+	lines= startProcess(command, stdin, shell= shell)
 	streamCount= 2
 	stdout= []
 	stderr= []
