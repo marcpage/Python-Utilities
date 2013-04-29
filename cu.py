@@ -6,12 +6,27 @@ import os
 import os.path
 import tempfile
 import random
+import smtplib
 import threading
 try:
 	import subprocess
 	kUseSubProcess= True
 except:
 	kUseSubProcess= False
+
+def sendEmail(sender, recipients, subject, body, smtpServer):
+	if not isinstance(recipients, list):
+		recipients= [recipients]
+	server= smtplib.SMTP(smtpServer)
+	message= "From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s"%(
+		sender,
+		", ".join(recipients),
+		subject,
+		body
+	)
+	server.sendmail(sender, recipients, message)
+	server.quit()
+	return message
 
 def temporaryFile(prefix= None, extension=None, access= "w", temporaryDir= None, justPath= False):
 	""" Creates a unique file
@@ -77,18 +92,24 @@ class InputStreamToQueue(threading.Thread):
 		self.start()
 	def run(self):
 		""" Runs until end of stream or an exception is encountered """
-		while True:
+		try:
+			while True:
+				try:
+					line= self.__in.readline()
+				except Exception, exception:
+					self.__queue.put( ("exception", str(exception)) )
+					break
+				if len(line) == 0:
+					break
+				if None == self.__name:
+					self.__queue.put(line)
+				else:
+					self.__queue.put( (self.__name, line) )
+		except Exception, exception:
 			try:
-				line= self.__in.readline()
-			except Exception, exception:
 				self.__queue.put( ("exception", str(exception)) )
-				break
-			if len(line) == 0:
-				break
-			if None == self.__name:
-				self.__queue.put(line)
-			else:
-				self.__queue.put( (self.__name, line) )
+			except Exception:
+				pass
 		self.__queue.put(None)
 
 class PopenCompatability:
@@ -173,8 +194,11 @@ def execute(command, interleave= False, stdin= None, debugLevel= 0, shell= True)
 			stdout.append(line[1])
 		else:
 			stderr.append(line[1])
+			if line[0] == "exception" and debugLevel >= 1:
+				print line[1]
 		if debugLevel >= 4:
-			print line
+			if None != line:
+				print line
 	if debugLevel == 3:
 		print "STDOUT"
 		print "".join(stdout)
