@@ -14,6 +14,13 @@ try:
 except:
 	kUseSubProcess= False
 
+
+global ShellEscapePattern
+ShellEscapePattern= re.compile(r"[^A-Za-z0-9 ./,-]")
+def shellEscape(path):
+	global ShellEscapePattern
+	return ShellEscapePattern.sub(lambda m:"\\"+m.group(0), path)
+
 def sendEmail(sender, recipients, subject, body, smtpServer):
 	if not isinstance(recipients, list):
 		recipients= [recipients]
