@@ -3,6 +3,7 @@
 import sys
 import Queue
 import os
+import re
 import os.path
 import tempfile
 import random
