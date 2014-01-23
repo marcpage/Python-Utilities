@@ -17,7 +17,7 @@ except:
 
 
 global ShellEscapePattern
-ShellEscapePattern= re.compile(r"[^A-Za-z0-9 ./,-]")
+ShellEscapePattern= re.compile(r"[^A-Za-z0-9./,-]")
 def shellEscape(path):
 	global ShellEscapePattern
 	return ShellEscapePattern.sub(lambda m:"\\"+m.group(0), path)
@@ -35,6 +35,57 @@ def sendEmail(sender, recipients, subject, body, smtpServer):
 	server.sendmail(sender, recipients, message)
 	server.quit()
 	return message
+
+def diskUsage():
+	columns= {
+		'Filesystem': {'format':'s'},
+		'1024-blocks': {'format':'i'},
+		'Used': {'format':'i'},
+		'Available': {'format':'i'},
+		'Capacity': {'format':'%'},
+		'iused': {'format':'i'},
+		'ifree': {'format':'i'},
+		'%iused': {'format':'%'},
+		'Mounted on': {'format':'/'},
+	}
+	o= execute("df -k")[0]
+	o= o.strip().replace("\r\n", "\n").replace("\r", "\n")
+	lines= o.split("\n")
+	header= lines.pop(0)
+	for column in columns:
+		columns[column]['offset']= header.lower().find(column.lower())
+	columnOrder= filter(lambda x:columns[x]['offset'] >= 0, columns.keys())
+	columnOrder.sort(key=lambda x:columns[x]['offset'])
+	numberPattern= re.compile(r"\b([0-9%]+)\s+")
+	disks= {}
+	for line in lines:
+		numbers= []
+		for number in numberPattern.finditer(line):
+			value= number.group(1)
+			type= ''
+			if value[-1] == '%':
+				value= value[:-1]
+				type= '%'
+			numbers.append( (number.start(), number.end(), long(value), type) )
+		if columnOrder[-1].lower() != "mounted on":
+			raise SyntaxError("Expected last column to be 'Mounted on', but it was "+columnOrder[-1])
+		if columnOrder[0].lower() != "filesystem":
+			raise SyntaxError("Expected first column to be 'Filesystem', but it was "+columnOrder[0])
+		headers= list(columnOrder)
+		mountHeader= headers.pop()
+		filesystemHeader= headers.pop(0)
+		mount= line[numbers[-1][1]:].strip()
+		filesystem= line[:numbers[0][0]].strip()
+		if(len(headers) != len(numbers)):
+			raise SyntaxError("Number of columns and numbers do not match: headers "+str(len(headers))+" numbers "+str(len(numbers)))
+		disks[mount]= {filesystemHeader.lower():filesystem,mountHeader.lower():mount}
+		for column in zip(headers,numbers):
+			disks[mount][column[0].lower()]= column[1][2]
+		disks[mount]['__line__']= line
+		disks[mount]['size']= disks[mount]['1024-blocks'] * 1024
+		if 'available' in disks[mount]:
+			disks[mount]['free']= disks[mount]['available'] * 1024
+	return disks
 
 def temporaryFile(prefix= None, extension=None, access= "w", temporaryDir= None, justPath= False):
 	""" Creates a unique file
