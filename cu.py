@@ -22,6 +22,39 @@ def shellEscape(path):
 	global ShellEscapePattern
 	return ShellEscapePattern.sub(lambda m:"\\"+m.group(0), path)
 
+kShortLabels= ["B", "kiB", "MiB", "GiB", "TiB"]
+kLongLabels= ["bytes", "kibibytes", "mebibytes", "gibibytes", "tebibytes"]
+def formatDiskSize(size, format="%(size)0.1f %(label)s", labels= None):
+	if size < 0:
+		prefix= "-"
+		size*= -1
+	else:
+		prefix= ""
+	if None == labels:
+		labels= list(kShortLabels)
+	else:
+		labels= list(labels)
+	while size > 1024.0 and len(labels) > 1:
+		size/= 1024.0
+		labels.pop(0)
+	return prefix+format%{'size': size, 'label': labels[0]}
+
+def parseDiskSize(value):
+	unit= value[-1].lower()
+	multiplier= 1
+	base= value[:-1].strip()
+	if unit == 't':
+		multiplier= 1024 * 1024 * 1024 * 1024
+	elif unit == 'g':
+		multiplier= 1024 * 1024 * 1024
+	elif unit == 'm':
+		multiplier= 1024 * 1024
+	elif unit == 'k':
+		multiplier= 1024
+	else:
+		base= value
+	return long(base) * multiplier
+
 def sendEmail(sender, recipients, subject, body, smtpServer):
 	if not isinstance(recipients, list):
 		recipients= [recipients]
