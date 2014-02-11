@@ -328,3 +328,36 @@ def parseArgs(validArgs):
 			raise SyntaxError(
 				"ERROR: Unknown parameter: "+arg+"\nValid Args: "+", ".join(validArgs.keys())+"\n"
 			)
+
+def mounts():
+	mountInfo= {}
+	global MountsPattern
+	locations= execute("mount")[0].replace("\r\n","\n").replace("\r","\n").split("\n")
+	for line in locations:
+		if line:
+			(identifier,remainder)= line.split(" on ",1)
+			(path,remainder)= remainder.split('(',1)
+			(parameters,remainder)= remainder.split(')',1)
+			mountInfo[path.strip()]= (identifier.strip(),map(lambda x:x.strip(),parameters.split(',')))
+	return mountInfo
+
+def localMountPoints(mounted):
+	locals= filter(lambda x:'local' in mounted[x][1],mounted)
+	locals= filter(lambda x:'nodev' not in mounted[x][1],locals)
+	locals= filter(lambda x:'nobrowse' not in mounted[x][1],locals)
+	return locals
+
+def localMounts():
+	mounted= mounts()
+	locals= localMountPoints(mounted)
+	notLocals= filter(lambda x:x not in locals, mounted)
+	for item in notLocals:
+		del mounted[item]
+	return mounted
+
+def notLocalMounts():
+	mounted= mounts()
+	locals= localMountPoints(mounted)
+	for item in locals:
+		del mounted[item]
+	return mounted
