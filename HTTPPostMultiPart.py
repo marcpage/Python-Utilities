@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python -B
 
 import sys
 import hashlib
@@ -77,7 +77,7 @@ Content-Disposition: form-data; name="test"
 Content-Disposition: form-data; name="file1"; filename="DataStore.py"
 Content-Type: text/x-python-script
 
-#!/usr/bin/python
+#!/usr/bin/env python -B
 
 import sys
 import hashlib

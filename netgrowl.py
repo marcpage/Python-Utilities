@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python -B
 
 """Growl 0.6 Network Protocol Client for Python"""
 __version__ = "0.6.3"

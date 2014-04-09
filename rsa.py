@@ -1,3 +1,5 @@
+#!/usr/bin/env python -B
+
 """RSA module
 Gnu Public Licence (GPL) as well as the European Union Public Licence (EUPL)
 
