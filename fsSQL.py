@@ -1,4 +1,4 @@
-#!/usr/bin/env python -B
+#!/usr/bin/python
 
 try:
 	import sqlite3

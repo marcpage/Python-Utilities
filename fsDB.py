@@ -203,10 +203,10 @@ class Database:
 				values.append("NULL")
 			elif isinstance(fields[key], SpecialValue):
 				values.append(str(fields[key]))
-			elif len(fields[key]) == 0:
+			elif len(str(fields[key])) == 0:
 				values.append("NULL")
 			else:
-				values.append("'%s'"%(fields[key].replace("'", "''")))
+				values.append("'%s'"%(str(fields[key]).replace("'", "''")))
 		return (keys, values)
 	def addRow(self, fields, doCommit= True):
 		(keys, values)= self.__interpretFields(fields)
@@ -224,9 +224,10 @@ class Database:
 		else:
 			whereClause= "`%s` = '%s'"%(idField, id)
 		return self.execute("UPDATE `%s` SET %s WHERE %s;"%(self.__db, ", ".join(changes), whereClause), doCommit)
-	def lastID(self):
+	def lastID(self, idField= "id"):
 		if self.__type == "sqlite3":
-			return self.execute("SELECT last_insert_rowid() AS `id`;", doCommit= False)[0]['id']
+			return self.execute("SELECT last_insert_rowid() AS `%s`;"%(idField),
+																	doCommit= False)[0][idField]
 		return self.execute("SELECT LAST_INSERT_ID();", doCommit= False)[0]['LAST_INSERT_ID()']
 	def deleteWhere(self, whereClause, doCommit= True):
 		return self.execute("DELETE FROM `%s` WHERE %s;"%(self.__db, whereClause), doCommit)
